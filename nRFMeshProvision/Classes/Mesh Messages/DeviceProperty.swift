@@ -215,6 +215,8 @@ public enum DeviceProperty {
     case outputPowerLimitation
     case thermalDerating
     case outputCurrentPercent
+    //case rotation3D
+    //case acceleration3D
     case unknown(UInt16)
     
     init(_ id: UInt16) {
@@ -851,6 +853,11 @@ internal extension DeviceProperty {
              .lightControlRegulatorKpu,
              .sensorGain:
             return 4
+
+        case .magneticFluxDensity3D:
+             //.rotation3D,
+             //.acceleration3D:
+            return 6
             
         case .deviceFirmwareRevision,
              .deviceSoftwareRevision:
@@ -1035,6 +1042,29 @@ internal extension DeviceProperty {
             guard length == valueLength else { return .fixedString64(String(repeating: " ", count: 64)) }
             return .fixedString64(String(data: data.subdata(in: offset..<offset + 64), encoding: .utf8)!)
             
+        case .magneticFluxDensity3D:
+            guard length == valueLength else { return .magneticFluxDensity3D(nil, nil, nil) }
+            let x: Int16 = data.read(fromOffset: offset)
+            let y: Int16 = data.read(fromOffset: offset + 2)
+            let z: Int16 = data.read(fromOffset: offset + 4)
+            return .magneticFluxDensity3D(x.withUnknownValue(0xFF),
+                                          y.withUnknownValue(0xFF),
+                                          z.withUnknownValue(0xFF))
+
+        /*case .rotation3D:
+            guard length === valueLength else { return .rotation3D(nil, nil, nil) }
+            let x: Int16 = data.read(fromOffset: offset)
+            let y: Int16 = data.read(fromOffset: offset + 2)
+            let z: Int16 = data.read(fromOffset: offset + 4)
+            return .rotation3D(x, y, z)
+
+        case .acceleration3D:
+            guard length === valueLength else { return .acceleration3D(nil, nil, nil) }
+            let x: Int16 = data.read(fromOffset: offset)
+            let y: Int16 = data.read(fromOffset: offset + 2)
+            let z: Int16 = data.read(fromOffset: offset + 4)
+            return .acceleration3D(x, y, z)*/
+
         // Other:
         default:
             return .other(data.subdata(in: offset..<offset + length))
@@ -1106,6 +1136,11 @@ public enum DevicePropertyCharacteristic: Equatable {
     /// The Time Second 32 characteristic is used to represent a period of time with
     /// a unit of 1 second.
     case timeSecond32(UInt32?)
+
+    case magneticFluxDensity3D(Int16?, Int16?, Int16?)
+    //case rotation3D(Int16?, Int16?, Int16?)
+    //case acceleration3D(Int16?, Int16?, Int16?)
+
     /// Generic data type for other characteristics.
     case other(Data)
 }
@@ -1185,6 +1220,10 @@ internal extension DevicePropertyCharacteristic {
             return string.padding(toLength: 36, withPad: " ", startingAt: 0).data(using: .utf8)!.prefix(36)
         case .fixedString64(let string):
             return string.padding(toLength: 64, withPad: " ", startingAt: 0).data(using: .utf8)!.prefix(64)
+
+        case .magneticFluxDensity3D(let x, let y, let z):
+            return x.toData(ofLength: 2, withUnknownValue: 0xFF) + y.toData(ofLength: 2, withUnknownValue: 0xFF) + z.toData(ofLength: 2, withUnknownValue: 0xFF)
+
             
         // Other:
         case .other(let data):
@@ -1317,6 +1356,9 @@ extension DevicePropertyCharacteristic: CustomDebugStringConvertible {
              .fixedString36(let string),
              .fixedString64(let string):
             return string
+
+        case .magneticFluxDensity3D(let x, let y, let z):
+            return String(format: "%d, %d, %d", x ?? 0xFF, y ?? 0xFF, z ?? 0xFF)
             
         // Other:
         case .other(let data):

@@ -238,4 +238,38 @@ class DeviceProperties: XCTestCase {
         }
     }
 
+    func testMagneticFluxDensity3D() throws {
+        let data = Data([0x01, 0x00, 0x02, 0x00, 0x03, 0x00])
+        let result: [Int16] = [1, 2, 3]
+        let characteristic = DeviceProperty.magneticFluxDensity3D.read(from: data, at: 0, length: 6)
+
+        switch characteristic {
+        case .magneticFluxDensity3D(let x, let y, let z):
+            XCTAssertEqual([x, y, z], result, "Failed to parse \(data.hex) into \(String(describing: result))")
+        default:
+            XCTFail("Failed to parse \(data.hex) into .magneticFluxDensity3D")
+        }
+
+        let test = DevicePropertyCharacteristic.magneticFluxDensity3D(result[0], result[1], result[2])
+        XCTAssertEqual(test, characteristic)
+        XCTAssertEqual(characteristic.data, data, "\(characteristic.data.hex) != \(data.hex)")
+    }
+
+    func testMagneticFluxDensity3DInSensorStatus() throws {
+        let data = Data([0x6A, 0x14, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00])
+        let result: [Int16] = [1, 2, 3]
+        guard let message = SensorStatus(parameters: data) else {
+            XCTFail("Failed to parse \(data.hex) into SensorStatus")
+            return
+        }
+        XCTAssertEqual(1, message.values.count)
+        let value = message.values.first!
+        XCTAssertEqual(DeviceProperty.magneticFluxDensity3D.id, value.property.id)
+        switch value.value {
+        case .magneticFluxDensity3D(let x, let y, let z):
+            XCTAssertEqual([x, y, z], result, "Failed to parse \(data.hex) into \(String(describing: result))")
+        default:
+            XCTFail("Failed to parse \(data.hex) into .magneticFluxDensity3D")
+        }
+    }
 }
